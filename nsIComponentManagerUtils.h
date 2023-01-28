@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is XPCOM
  *
- * The Initial Developer of the Original Code is 
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2003
+ * The Initial Developer of the Original Code is Netscape Communications 
+ * Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,36 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef nsIComponentManagerUtils_h__
+#define nsIComponentManagerUtils_h__
 
-interface nsIFile;
 
-[uuid(10d1a2a2-d816-458d-a4c3-0805ff0f7b31)]
-interface nsINativeComponentLoader : nsISupports
-{
 
-  /**
-   *  addDependentLibrary
-   *
-   *  This method informs the native component loader that the 
-   *  given component library referenced by |aFile| requires 
-   *  symbols that can be found in the library named |aLibName|.
-   *  
-   *  The native component loader is expected to resolve these 
-   *  external symobls prior to loading the component library.  
-   *
-   *  @param aFile
-   *       The native component file location that is declaring a 
-   *       a dependency. This file is expected to be a DSO/DLL.
-   *
-   *  @param aLibName
-   *       This is a name of a library that the component requires.
-   *       This file name is found in either the GRE bin directory 
-   *       or the application's bin directory.  Full file path are 
-   *       also accepted.  Passing nsnull for the |aLibName| will 
-   *       clear all dependencies.  Note that non null aLibName
-   *       values are expected to be in the native charset.
-   */
-  
-  void addDependentLibrary(in nsIFile aFile, in string aLibName);
-};
+#endif

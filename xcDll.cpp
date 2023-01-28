@@ -1,11 +1,11 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,16 +22,16 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -55,7 +55,6 @@
 #include "nsCRT.h"
 #include "nsString.h"
 #include "nsITimelineService.h"
-#include "nsModule.h"
 #ifdef DEBUG
 #if defined(VMS)
 #include <lib$routines.h>
@@ -64,8 +63,6 @@
 #include <signal.h>
 #endif
 #endif /* defined(DEBUG) */
-
-#include "nsTraceRefcntImpl.h"
 
 #define UNLOAD_DEPENDENT_LIBS
 #ifdef HPUX
@@ -103,7 +100,7 @@ nsDll::GetDisplayPath(nsACString& aLeafName)
     m_dllSpec->GetNativeLeafName(aLeafName);
     
     if (aLeafName.IsEmpty())
-        aLeafName.AssignLiteral("unknown!");
+        aLeafName.Assign(NS_LITERAL_CSTRING("unknown!"));
 }
 
 PRBool
@@ -134,7 +131,7 @@ PRBool nsDll::Load(void)
     if (m_dllSpec)
     {
 #ifdef NS_BUILD_REFCNT_LOGGING
-        nsTraceRefcntImpl::SetActivityIsLegal(PR_FALSE);
+        nsTraceRefcnt::SetActivityIsLegal(PR_FALSE);
 #endif
         
     // Load any library dependencies
@@ -146,6 +143,11 @@ PRBool nsDll::Load(void)
     //   component is loaded into memory, we can release our hold 
     //   on the dependent libraries with the assumption that the 
     //   component library holds a reference via the OS so loader.
+
+    if (!m_loader->mLoadedDependentLibs) {
+        NS_ERROR("huh?  no dependent libs");
+        return PR_TRUE;
+    }
 
 #if defined(XP_UNIX)
     nsCOMPtr<nsIComponentLoaderManager> manager = do_QueryInterface(m_loader->mCompMgr);
@@ -186,12 +188,12 @@ PRBool nsDll::Load(void)
         while (token!=nsnull)
         {
             nsCStringKey key(token);
-            if (m_loader->mLoadedDependentLibs.Get(&key)) {
+            if (m_loader->mLoadedDependentLibs->Get(&key)) {
                 token = nsCRT::strtok(newStr, " ", &newStr);
                 continue;
             }
 
-            m_loader->mLoadedDependentLibs.Put(&key, (void*)1);
+            m_loader->mLoadedDependentLibs->Put(&key, (void*)1);
 
             nsXPIDLCString libpath;
             file->SetNativeLeafName(nsDependentCString(token));
@@ -253,13 +255,13 @@ PRBool nsDll::Load(void)
 #endif
 
 #ifdef NS_BUILD_REFCNT_LOGGING
-        nsTraceRefcntImpl::SetActivityIsLegal(PR_TRUE);
+        nsTraceRefcnt::SetActivityIsLegal(PR_TRUE);
         if (m_instance) {
             // Inform refcnt tracer of new library so that calls through the
             // new library can be traced.
             nsXPIDLCString displayPath;
             GetDisplayPath(displayPath);
-            nsTraceRefcntImpl::LoadLibrarySymbols(displayPath.get(), m_instance);
+            nsTraceRefcnt::LoadLibrarySymbols(displayPath.get(), m_instance);
         }
 #endif
     }
@@ -285,11 +287,11 @@ PRBool nsDll::Unload(void)
     Shutdown();
 
 #ifdef NS_BUILD_REFCNT_LOGGING
-    nsTraceRefcntImpl::SetActivityIsLegal(PR_FALSE);
+    nsTraceRefcnt::SetActivityIsLegal(PR_FALSE);
 #endif
 	PRStatus ret = PR_UnloadLibrary(m_instance);
 #ifdef NS_BUILD_REFCNT_LOGGING
-    nsTraceRefcntImpl::SetActivityIsLegal(PR_TRUE);
+    nsTraceRefcnt::SetActivityIsLegal(PR_TRUE);
 #endif
 
 	if (ret == PR_SUCCESS)

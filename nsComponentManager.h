@@ -1,11 +1,11 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,16 +22,16 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -41,13 +41,12 @@
 #include "nsXPCOM.h"
 
 #include "nsIComponentLoader.h"
-#include "xpcom-private.h"
 #include "nsNativeComponentLoader.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIComponentManagerObsolete.h"
 #include "nsIComponentLoaderManager.h"
-#include "nsCategoryManager.h"
+#include "nsICategoryManager.h"
 #include "nsIServiceManager.h"
 #include "nsIFactory.h"
 #include "nsIInterfaceRequestor.h"
@@ -65,21 +64,6 @@ class nsFactoryEntry;
 class nsDll;
 class nsIServiceManager;
 
-#define NS_COMPONENTMANAGER_CID                      \
-{ /* 91775d60-d5dc-11d2-92fb-00e09805570f */         \
-    0x91775d60,                                      \
-    0xd5dc,                                          \
-    0x11d2,                                          \
-    {0x92, 0xfb, 0x00, 0xe0, 0x98, 0x05, 0x57, 0x0f} \
-}
-
-/* keys for registry use */
-extern const char xpcomKeyName[];
-extern const char xpcomComponentsKeyName[];
-extern const char lastModValueName[];
-extern const char fileSizeValueName[];
-extern const char nativeComponentType[];
-extern const char staticComponentType[];
 
 // Predefined loader types. Do not change the numbers.
 // NATIVE should be 0 as it is being used as the first array index.
@@ -129,7 +113,7 @@ public:
 
     // Since the nsIComponentManagerObsolete and nsIComponentRegistrar share some of the
     // same interface function names, we have to manually define the functions here.
-    // the only function that is shared is UnregisterFactory
+    // the only fuction that is shared is UnregisterFactory
     NS_IMETHOD AutoRegister(nsIFile *aSpec); 
     NS_IMETHOD AutoUnregister(nsIFile *aSpec); 
     NS_IMETHOD RegisterFactory(const nsCID & aClass, const char *aClassName, const char *aContractID, nsIFactory *aFactory); 
@@ -149,20 +133,28 @@ public:
 
     // nsComponentManagerImpl methods:
     nsComponentManagerImpl();
+    virtual ~nsComponentManagerImpl();
 
     static nsComponentManagerImpl* gComponentManager;
     nsresult Init(void);
 
     nsresult WritePersistentRegistry();
     nsresult ReadPersistentRegistry();
+private:
+    nsresult WriteCategoryManagerToRegistry(PRFileDesc* fd);
+public:
 
     nsresult Shutdown(void);
 
     nsresult FreeServices();
 
-    nsresult
+    friend class nsFactoryEntry;
+    friend class nsServiceManager;
+
+    friend nsresult
     NS_GetService(const char *aContractID, const nsIID& aIID, PRBool aDontCreate, nsISupports** result);
 
+protected:
     nsresult RegisterComponentCommon(const nsCID &aClass,
                                      const char *aClassName,
                                      const char *aContractID,
@@ -179,12 +171,17 @@ public:
     nsFactoryEntry *GetFactoryEntry(const char *aContractID,
                                     PRUint32 aContractIDLen);
     nsFactoryEntry *GetFactoryEntry(const nsCID &aClass);
+    nsFactoryEntry *GetFactoryEntry(const nsCID &aClass, nsIDKey &cidKey);
 
     nsresult SyncComponentsInDir(PRInt32 when, nsIFile *dirSpec);
     nsresult SelfRegisterDll(nsDll *dll);
     nsresult SelfUnregisterDll(nsDll *dll);
     nsresult HashContractID(const char *acontractID, PRUint32 aContractIDLen,
                             nsFactoryEntry *fe_ptr);
+    nsresult HashContractID(const char *acontractID, PRUint32 aContractIDLen,
+                            const nsCID &aClass, nsFactoryEntry **fe_ptr = NULL);
+    nsresult HashContractID(const char *acontractID, PRUint32 aContractIDLen,
+                            const nsCID &aClass, nsIDKey &cidKey, nsFactoryEntry **fe_ptr = NULL);
 
     void DeleteContractIDEntriesByCID(const nsCID* aClass, const char*registryName);
     void DeleteContractIDEntriesByCID(const nsCID* aClass, nsIFactory* factory);
@@ -196,20 +193,23 @@ public:
     // loader type cannot be determined.
     int GetLoaderType(const char *typeStr);
 
-    // Add a loader type if not already known. Out the typeIndex
-    // if the loader type is either added or already there;
-    // returns NS_OK or an error on failure.
-    nsresult AddLoaderType(const char *typeStr, int *typeIndex);
+    // Add a loader type if not already known. Return the typeIndex
+    // if the loader type is either added or already there; -1 if
+    // there was an error
+    int AddLoaderType(const char *typeStr);
 
+public:
     int GetLoaderCount() { return mNLoaderData + 1; }
 
     // registers only the files in spec's location by loaders other than the
     // native loader.  This is an optimization method only.
     nsresult AutoRegisterNonNativeComponents(nsIFile* spec);
 
-    nsresult AutoRegisterImpl(PRInt32 when, nsIFile *inDirSpec, PRBool fileIsCompDir=PR_TRUE);
-    nsresult RemoveEntries(nsIFile* file);
 
+private:
+    nsresult AutoRegisterImpl(PRInt32 when, nsIFile *inDirSpec, PRBool fileIsCompDir=PR_TRUE);
+
+protected:
     PLDHashTable        mFactories;
     PLDHashTable        mContractIDs;
     PRMonitor*          mMon;
@@ -238,7 +238,7 @@ public:
 
     PRBool              mRegistryDirty;
     nsHashtable         mAutoRegEntries;
-    nsCOMPtr<nsCategoryManager>  mCategoryManager;
+    nsCOMPtr<nsICategoryManager>  mCategoryManager;
 
     PLArenaPool   mArena;
 
@@ -249,14 +249,38 @@ public:
     nsVoidArray         mPendingCIDs;
 #endif
 
-private:
-    ~nsComponentManagerImpl();
 };
 
 
 #define NS_MAX_FILENAME_LEN	1024
 
 #define NS_ERROR_IS_DIR NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_XPCOM, 24)
+
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
+/* The default registry on the unix system is $HOME/.mozilla/registry per
+ * vr_findGlobalRegName(). vr_findRegFile() will create the registry file
+ * if it doesn't exist. But it wont create directories.
+ *
+ * Hence we need to create the directory if it doesn't exist already.
+ *
+ * Why create it here as opposed to the app ?
+ * ------------------------------------------
+ * The app cannot create the directory in main() as most of the registry
+ * and initialization happens due to use of static variables.
+ * And we dont want to be dependent on the order in which
+ * these static stuff happen.
+ *
+ * Permission for the $HOME/.mozilla will be Read,Write,Execute
+ * for user only. Nothing to group and others.
+ */
+#define NS_MOZILLA_DIR_NAME		".mozilla"
+#define NS_MOZILLA_DIR_PERMISSION	00700
+#endif /* XP_UNIX */
+
+#ifdef XP_BEOS
+#define NS_MOZILLA_DIR_NAME		"Mozilla"
+#define NS_MOZILLA_DIR_PERMISSION	00700
+#endif /* XP_BEOS */
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -300,15 +324,9 @@ public:
             return rv;
 
         rv = loader->GetFactory(mCid, mLocation, mgr->mLoaderData[mTypeIndex].type, aFactory);
-        if (NS_FAILED(rv))
-            return rv;
-
-        NS_ASSERTION(*aFactory, "Loader says it succeeded; got null factory!");
-        mFactory = do_QueryInterface(*aFactory);
-        if (!mFactory)
-            return NS_ERROR_NO_INTERFACE;
-
-        return NS_OK;
+        if (NS_SUCCEEDED(rv))
+            mFactory = do_QueryInterface(*aFactory);
+        return rv;
     }
 
     nsCID mCid;
@@ -337,7 +355,7 @@ class AutoRegEntry
 {
 public:
     AutoRegEntry(const nsACString& name, PRInt64* modDate);
-    ~AutoRegEntry();
+    virtual ~AutoRegEntry();
 
     const nsDependentCString GetName()
       { return nsDependentCString(mName, mNameLen); }
